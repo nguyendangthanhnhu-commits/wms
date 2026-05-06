@@ -3,24 +3,12 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { prisma } from "@/lib/prisma";
+import { listVouchers } from "@/lib/db-cache";
 
 export const dynamic = "force-dynamic";
 
 export default async function VouchersPage() {
-  const vouchers = await prisma.stockVoucher.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 200,
-    select: {
-      id: true,
-      voucherCode: true,
-      voucherType: true,
-      status: true,
-      createdAt: true,
-      fromWarehouse: { select: { code: true, name: true } },
-      toWarehouse: { select: { code: true, name: true } },
-    },
-  });
+  const vouchers = await listVouchers();
 
   return (
     <Card>

@@ -6,6 +6,7 @@ Skeleton cho WMS theo guide (Next.js App Router + Supabase Auth + Prisma + Verce
 
 - Copy `.env.example` → `.env.local` và điền Supabase keys + `DATABASE_URL`/`DIRECT_URL`.
 - Prisma đang pin **v6.19.3** (để giữ `DATABASE_URL`/`directUrl` trong `prisma/schema.prisma` đúng như guide).
+- Với Supabase Pooler/PgBouncer (Vercel/serverless), cần thêm `statement_cache_size=0` vào `DATABASE_URL` để tránh lỗi prepared statement (`42P05` / `26000`).
 
 ### Database
 

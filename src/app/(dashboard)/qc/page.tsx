@@ -3,22 +3,12 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { prisma } from "@/lib/prisma";
+import { listQcEvaluations } from "@/lib/db-cache";
 
 export const dynamic = "force-dynamic";
 
 export default async function QcPage() {
-  const evaluations = await prisma.qcEvaluation.findMany({
-    orderBy: { evaluatedAt: "desc" },
-    take: 200,
-    select: {
-      id: true,
-      defectType: true,
-      resolution: true,
-      evaluatedAt: true,
-      voucher: { select: { id: true, voucherCode: true } },
-    },
-  });
+  const evaluations = await listQcEvaluations();
 
   return (
     <Card>

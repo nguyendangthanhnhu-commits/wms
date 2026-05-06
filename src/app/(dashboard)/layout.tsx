@@ -3,8 +3,8 @@ import { headers } from "next/headers";
 import { Header } from "@/components/layout/Header";
 import { ShiftCheckGuard } from "@/components/layout/ShiftCheckGuard";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { getAppUserForLayout } from "@/lib/db-cache";
 import { getNavItemsForRole } from "@/lib/navigation";
-import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -23,10 +23,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       })());
 
   const appUser = userId
-    ? await prisma.user.findUnique({
-        where: { id: userId },
-        select: { role: true, fullName: true },
-      })
+    ? await getAppUserForLayout(userId)
     : null;
 
   const navItems = getNavItemsForRole(appUser?.role ?? null);

@@ -1,16 +1,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { prisma } from "@/lib/prisma";
+import { getDashboardCounts } from "@/lib/db-cache";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [warehouses, products, vouchers, sessions, qc] = await Promise.all([
-    prisma.warehouse.count({ where: { isActive: true } }),
-    prisma.product.count({ where: { isActive: true } }),
-    prisma.stockVoucher.count(),
-    prisma.inventoryCheckSession.count(),
-    prisma.qcEvaluation.count(),
-  ]);
+  const { warehouses, products, vouchers, sessions, qc } = await getDashboardCounts();
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

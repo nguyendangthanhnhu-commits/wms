@@ -2,31 +2,14 @@ import { notFound } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { prisma } from "@/lib/prisma";
+import { getQcEvaluationDetail } from "@/lib/db-cache";
 
 export const dynamic = "force-dynamic";
 
 export default async function QcDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const evaluation = await prisma.qcEvaluation.findUnique({
-    where: { id },
-    include: {
-      voucher: { select: { id: true, voucherCode: true, voucherType: true, status: true } },
-      defectReport: {
-        include: {
-          product: { select: { sku: true, name: true } },
-          unit: { select: { code: true } },
-          discoveredWarehouse: { select: { code: true, name: true } },
-          reportedBy: { select: { employeeCode: true, fullName: true } },
-        },
-      },
-      supplier: { select: { code: true, name: true } },
-      evaluatedBy: { select: { employeeCode: true, fullName: true } },
-      responsibleWarehouse: { select: { code: true, name: true } },
-      responsibleUser: { select: { employeeCode: true, fullName: true } },
-    },
-  });
+  const evaluation = await getQcEvaluationDetail(id);
 
   if (!evaluation) notFound();
 

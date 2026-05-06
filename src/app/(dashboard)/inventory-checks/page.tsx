@@ -3,22 +3,12 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { prisma } from "@/lib/prisma";
+import { listInventoryCheckSessions } from "@/lib/db-cache";
 
 export const dynamic = "force-dynamic";
 
 export default async function InventoryChecksPage() {
-  const sessions = await prisma.inventoryCheckSession.findMany({
-    orderBy: { shiftDate: "desc" },
-    take: 200,
-    select: {
-      id: true,
-      checkType: true,
-      shiftDate: true,
-      status: true,
-      warehouse: { select: { code: true, name: true } },
-    },
-  });
+  const sessions = await listInventoryCheckSessions();
 
   return (
     <Card>

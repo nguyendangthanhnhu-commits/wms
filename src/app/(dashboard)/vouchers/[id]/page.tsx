@@ -3,30 +3,14 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { prisma } from "@/lib/prisma";
+import { getVoucherDetail } from "@/lib/db-cache";
 
 export const dynamic = "force-dynamic";
 
 export default async function VoucherDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const voucher = await prisma.stockVoucher.findUnique({
-    where: { id },
-    include: {
-      fromWarehouse: { select: { code: true, name: true } },
-      toWarehouse: { select: { code: true, name: true } },
-      createdBy: { select: { employeeCode: true, fullName: true } },
-      items: {
-        include: {
-          product: { select: { sku: true, name: true } },
-          unit: { select: { code: true, name: true } },
-        },
-      },
-      defectReport: true,
-      qcEvaluation: true,
-      attachments: true,
-    },
-  });
+  const voucher = await getVoucherDetail(id);
 
   if (!voucher) notFound();
 
