@@ -1,6 +1,7 @@
 import type { SidebarNavItem } from "@/components/layout/Sidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { NotificationBell } from "@/components/shared/NotificationBell";
+import { Separator } from "@/components/ui/separator";
 
 type HeaderProps = {
   title?: string;
@@ -17,6 +18,7 @@ export function Header({ title, navItems, pathname }: HeaderProps) {
         <div className="truncate text-sm font-semibold">{title ?? "Dashboard"}</div>
       </div>
 
+      <Separator orientation="vertical" className="hidden h-6 md:block" />
       <NotificationBell />
     </header>
   );
