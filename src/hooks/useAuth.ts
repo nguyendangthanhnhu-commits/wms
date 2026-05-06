@@ -1,0 +1,16 @@
+import useSWR from "swr";
+
+const fetcher = (url: string) =>
+  fetch(url).then((res) => {
+    if (!res.ok) throw new Error("Fetch failed");
+    return res.json();
+  });
+
+export function useAuthMe() {
+  const { data, error, isLoading, mutate } = useSWR("/api/auth/me", fetcher, {
+    revalidateOnFocus: true,
+    dedupingInterval: 5000,
+  });
+
+  return { me: data?.user ?? null, error, isLoading, mutate };
+}
