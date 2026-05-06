@@ -10,15 +10,21 @@ import { createClient } from "@/lib/supabase/server";
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const hdrs = await headers();
   const pathname = hdrs.get("x-next-pathname") ?? "/";
+  const userIdFromMiddleware = hdrs.get("x-user-id");
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = userIdFromMiddleware
+    ? userIdFromMiddleware
+    : (await (async () => {
+        const supabase = await createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        return user?.id ?? null;
+      })());
 
-  const appUser = user
+  const appUser = userId
     ? await prisma.user.findUnique({
-        where: { id: user.id },
+        where: { id: userId },
         select: { role: true, fullName: true },
       })
     : null;

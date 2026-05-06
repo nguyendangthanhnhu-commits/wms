@@ -28,6 +28,10 @@ export async function middleware(request: NextRequest) {
   }
 
   supabaseResponse.headers.set("x-next-pathname", pathname);
+  if (user?.id) {
+    // Reuse in server components to avoid a second auth.getUser() call.
+    supabaseResponse.headers.set("x-user-id", user.id);
+  }
 
   return supabaseResponse;
 }
