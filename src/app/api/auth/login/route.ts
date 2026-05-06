@@ -4,7 +4,7 @@ export async function GET() {
   return NextResponse.json(
     {
       message:
-        "TODO: triển khai OAuth/Magic link với Supabase Auth (redirect URLs). Tạm thời dùng seed user trong DB.",
+        "Trang /login đã hỗ trợ Email/Password (server action). Endpoint này giữ chỗ cho OAuth/Magic Link (TODO).",
     },
     { status: 501 }
   );

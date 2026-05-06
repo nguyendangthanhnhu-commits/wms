@@ -1,13 +1,70 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 
-export default function LoginPage({
+export const dynamic = "force-dynamic";
+
+export default async function LoginPage({
   searchParams,
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  async function loginAction(formData: FormData) {
+    "use server";
+
+    const email = String(formData.get("email") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
+    const nextRaw = String(formData.get("next") ?? "");
+
+    if (!email || !password) {
+      redirect("/login?error=missing_credentials");
+    }
+
+    const supabase = await createClient();
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error || !data.user) {
+      redirect("/login?error=invalid_credentials");
+    }
+
+    // Ensure Prisma user exists and matches Supabase user id
+    const userId = data.user.id;
+    const employeeCode = `EMP_${userId.replaceAll("-", "").slice(0, 10).toUpperCase()}`;
+    const fullName = data.user.user_metadata?.full_name ?? data.user.email ?? "User";
+
+    await prisma.user.upsert({
+      where: { id: userId },
+      update: {
+        fullName,
+        isActive: true,
+      },
+      create: {
+        id: userId,
+        employeeCode,
+        fullName,
+        isActive: true,
+      },
+    });
+
+    const next =
+      typeof nextRaw === "string" && nextRaw.startsWith("/") ? nextRaw : "/";
+
+    redirect(next);
+  }
+
+  const sp = (await searchParams) ?? {};
+  const nextRaw = sp["next"];
+  const nextValue =
+    typeof nextRaw === "string" && nextRaw.startsWith("/") ? nextRaw : "/";
+
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
@@ -15,11 +72,30 @@ export default function LoginPage({
         <CardDescription>WMS — Nhà máy Pin NLMT</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <Button asChild className="w-full">
-          <Link href="/api/auth/login">Tiếp tục với Supabase</Link>
-        </Button>
+        <form action={loginAction} className="space-y-3">
+          <input type="hidden" name="next" value={nextValue} />
+          <Input
+            name="email"
+            type="email"
+            placeholder="Email"
+            autoComplete="email"
+            required
+          />
+          <Input
+            name="password"
+            type="password"
+            placeholder="Mật khẩu"
+            autoComplete="current-password"
+            required
+          />
+          <Button type="submit" className="w-full">
+            Đăng nhập
+          </Button>
+        </form>
+
         <div className="text-xs text-muted-foreground">
-          Flow OAuth magic-link/email sẽ được bổ sung sau khi cấu hình Supabase Auth redirect URLs.
+          Tài khoản được quản trị trên Supabase Auth (Email/Password). Sau khi đăng
+          nhập lần đầu, hệ thống sẽ tạo hồ sơ người dùng trong Prisma.
         </div>
       </CardContent>
     </Card>
