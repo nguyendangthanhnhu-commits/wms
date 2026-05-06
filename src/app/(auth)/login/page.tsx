@@ -1,10 +1,9 @@
 import { redirect } from "next/navigation";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
 import { ensurePrismaUserFromAuthUser } from "@/lib/auth";
+import { LoginForm } from "@/app/(auth)/login/login-form";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +50,8 @@ export default async function LoginPage({
   const nextRaw = sp["next"];
   const nextValue =
     typeof nextRaw === "string" && nextRaw.startsWith("/") ? nextRaw : "/";
+  const errRaw = sp["error"];
+  const errorCode = typeof errRaw === "string" ? errRaw : null;
 
   return (
     <Card className="w-full max-w-md">
@@ -58,33 +59,7 @@ export default async function LoginPage({
         <CardTitle>Đăng nhập</CardTitle>
         <CardDescription>WMS — Nhà máy Pin NLMT</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <form action={loginAction} className="space-y-3">
-          <input type="hidden" name="next" value={nextValue} />
-          <Input
-            name="email"
-            type="email"
-            placeholder="Email"
-            autoComplete="email"
-            required
-          />
-          <Input
-            name="password"
-            type="password"
-            placeholder="Mật khẩu"
-            autoComplete="current-password"
-            required
-          />
-          <Button type="submit" className="w-full">
-            Đăng nhập
-          </Button>
-        </form>
-
-        <div className="text-xs text-muted-foreground">
-          Tài khoản được quản trị trên Supabase Auth (Email/Password). Sau khi đăng
-          nhập lần đầu, hệ thống sẽ tạo hồ sơ người dùng trong Prisma.
-        </div>
-      </CardContent>
+      <LoginForm nextValue={nextValue} errorCode={errorCode} action={loginAction} />
     </Card>
   );
 }

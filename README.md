@@ -22,6 +22,16 @@ npm run db:seed
 npm run dev
 ```
 
+### Shadcn UI (MCP)
+
+Repo đã cấu hình MCP server `shadcn` tại `.cursor/mcp.json`. Khi dùng Cursor Agent, bạn có thể yêu cầu “add component shadcn” và agent sẽ gọi MCP để kéo component vào `src/components/ui/*` theo cấu hình trong `components.json`.
+
+Nếu muốn dùng CLI thủ công (không qua MCP):
+
+```bash
+npx shadcn@latest add <component>
+```
+
 ### Ghi chú triển khai hiện tại
 
 - Middleware đang bảo vệ toàn bộ UI (trừ `/login`). API routes không bị middleware redirect.

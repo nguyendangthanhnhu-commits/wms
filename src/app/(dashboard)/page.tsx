@@ -1,4 +1,8 @@
+import Link from "next/link";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { getDashboardCounts } from "@/lib/db-cache";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +14,15 @@ export default async function DashboardPage() {
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       <Card>
         <CardHeader>
-          <CardTitle>WMS</CardTitle>
+          <PageHeader
+            title="WMS"
+            description="Nhà máy Pin NLMT — dashboard"
+            actions={
+              <Button asChild variant="secondary">
+                <Link href="/vouchers/new">Tạo phiếu</Link>
+              </Button>
+            }
+          />
           <CardDescription>Nhà máy Pin NLMT — skeleton đã sẵn sàng để phát triển module.</CardDescription>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">

@@ -30,6 +30,194 @@ export const getAppUserForLayout = unstable_cache(
   { revalidate: cacheSeconds("layout") }
 );
 
+export const listWarehouses = unstable_cache(
+  async () => {
+    return prisma.warehouse.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        groupType: true,
+        sortOrder: true,
+        manager: { select: { fullName: true } },
+      },
+      orderBy: { sortOrder: "asc" },
+      take: 500,
+    });
+  },
+  ["warehouses-list"],
+  { revalidate: cacheSeconds("list") }
+);
+
+export const getWarehouseDetail = unstable_cache(
+  async (id: string) => {
+    return prisma.warehouse.findUnique({
+      where: { id },
+      include: {
+        locations: true,
+        inventory: {
+          include: {
+            product: { select: { sku: true, name: true } },
+            unit: { select: { code: true } },
+          },
+        },
+      },
+    });
+  },
+  ["warehouse-detail"],
+  { revalidate: cacheSeconds("detail") }
+);
+
+export const listProducts = unstable_cache(
+  async () => {
+    return prisma.product.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        sku: true,
+        name: true,
+        productType: true,
+        baseUnit: { select: { code: true } },
+      },
+      orderBy: { sku: "asc" },
+      take: 500,
+    });
+  },
+  ["products-list"],
+  { revalidate: cacheSeconds("list") }
+);
+
+export const getProductDetail = unstable_cache(
+  async (id: string) => {
+    return prisma.product.findUnique({
+      where: { id },
+      include: {
+        baseUnit: { select: { code: true, name: true } },
+        category: { select: { code: true, name: true } },
+        suppliers: { include: { supplier: { select: { code: true, name: true } } } },
+      },
+    });
+  },
+  ["product-detail"],
+  { revalidate: cacheSeconds("detail") }
+);
+
+export const listStaff = unstable_cache(
+  async () => {
+    return prisma.user.findMany({
+      where: { isActive: true },
+      orderBy: { employeeCode: "asc" },
+      take: 500,
+      select: {
+        id: true,
+        employeeCode: true,
+        fullName: true,
+        role: true,
+        department: { select: { code: true, name: true } },
+      },
+    });
+  },
+  ["staff-list"],
+  { revalidate: cacheSeconds("list") }
+);
+
+export const listOrders = unstable_cache(
+  async () => {
+    return prisma.salesOrder.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 200,
+      select: {
+        id: true,
+        orderCode: true,
+        orderType: true,
+        status: true,
+        customerName: true,
+        requiredDate: true,
+        createdAt: true,
+      },
+    });
+  },
+  ["orders-list"],
+  { revalidate: cacheSeconds("list") }
+);
+
+export const getOrderDetail = unstable_cache(
+  async (id: string) => {
+    return prisma.salesOrder.findUnique({
+      where: { id },
+      include: {
+        items: {
+          include: {
+            product: { select: { sku: true, name: true } },
+            unit: { select: { code: true } },
+          },
+        },
+        vouchers: { select: { id: true, voucherCode: true, voucherType: true, status: true, createdAt: true } },
+      },
+    });
+  },
+  ["order-detail"],
+  { revalidate: cacheSeconds("detail") }
+);
+
+export const listBomVersions = unstable_cache(
+  async () => {
+    return prisma.bomVersion.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 200,
+      select: {
+        id: true,
+        versionName: true,
+        isActive: true,
+        createdAt: true,
+        product: { select: { id: true, sku: true, name: true } },
+      },
+    });
+  },
+  ["bom-versions-list"],
+  { revalidate: cacheSeconds("list") }
+);
+
+export const getBomVersionDetail = unstable_cache(
+  async (id: string) => {
+    return prisma.bomVersion.findUnique({
+      where: { id },
+      include: {
+        product: { select: { sku: true, name: true } },
+        items: {
+          include: {
+            component: { select: { sku: true, name: true } },
+            unit: { select: { code: true } },
+          },
+        },
+      },
+    });
+  },
+  ["bom-version-detail"],
+  { revalidate: cacheSeconds("detail") }
+);
+
+export const listProductionOutputs = unstable_cache(
+  async () => {
+    return prisma.productionOutput.findMany({
+      orderBy: { outputDate: "desc" },
+      take: 200,
+      select: {
+        id: true,
+        quantity: true,
+        shift: true,
+        outputDate: true,
+        product: { select: { sku: true, name: true } },
+        unit: { select: { code: true } },
+        voucher: { select: { id: true, voucherCode: true } },
+      },
+    });
+  },
+  ["production-outputs-list"],
+  { revalidate: cacheSeconds("list") }
+);
+
 export const getDashboardCounts = unstable_cache(
   async () => {
     const [warehouses, products, vouchers, sessions, qc] = await Promise.all([

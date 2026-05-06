@@ -1,58 +1,67 @@
 import Link from "next/link";
 
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import type { ColumnDef } from "@tanstack/react-table";
+
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { FilteredDataTable } from "@/components/shared/FilteredDataTable";
+import { StatusBadge } from "@/components/shared/StatusBadge";
 import { listVouchers } from "@/lib/db-cache";
 
 export const dynamic = "force-dynamic";
 
+type Row = Awaited<ReturnType<typeof listVouchers>>[number];
+
 export default async function VouchersPage() {
-  const vouchers = await listVouchers();
+  const data = await listVouchers();
+
+  const columns: ColumnDef<Row>[] = [
+    {
+      accessorKey: "voucherCode",
+      header: "Mã phiếu",
+      cell: ({ row }) => (
+        <Link prefetch className="underline underline-offset-4" href={`/vouchers/${row.original.id}`}>
+          {row.original.voucherCode}
+        </Link>
+      ),
+    },
+    { accessorKey: "voucherType", header: "Loại" },
+    {
+      accessorKey: "status",
+      header: "Trạng thái",
+      cell: ({ row }) => <StatusBadge status={String(row.original.status)} />,
+    },
+    {
+      accessorKey: "fromWarehouse",
+      header: "Từ kho",
+      cell: ({ row }) =>
+        row.original.fromWarehouse ? `${row.original.fromWarehouse.code} — ${row.original.fromWarehouse.name}` : "-",
+    },
+    {
+      accessorKey: "toWarehouse",
+      header: "Đến kho",
+      cell: ({ row }) =>
+        row.original.toWarehouse ? `${row.original.toWarehouse.code} — ${row.original.toWarehouse.name}` : "-",
+    },
+    {
+      accessorKey: "createdAt",
+      header: "Thời gian",
+      cell: ({ row }) => new Date(row.original.createdAt).toLocaleString("vi-VN"),
+    },
+  ];
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Phiếu kho</CardTitle>
+        <PageHeader title="Phiếu kho" description="Danh sách phiếu kho (demo)" />
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Mã phiếu</TableHead>
-              <TableHead>Loại</TableHead>
-              <TableHead>Trạng thái</TableHead>
-              <TableHead>Từ kho</TableHead>
-              <TableHead>Đến kho</TableHead>
-              <TableHead>Thời gian</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {vouchers.map((v) => (
-              <TableRow key={v.id}>
-                <TableCell className="font-medium">
-                  <Link prefetch className="underline underline-offset-4" href={`/vouchers/${v.id}`}>
-                    {v.voucherCode}
-                  </Link>
-                </TableCell>
-                <TableCell>{v.voucherType}</TableCell>
-                <TableCell>
-                  <Badge variant={v.status === "approved" ? "default" : "secondary"}>{v.status}</Badge>
-                </TableCell>
-                <TableCell>{v.fromWarehouse ? `${v.fromWarehouse.code} — ${v.fromWarehouse.name}` : "-"}</TableCell>
-                <TableCell>{v.toWarehouse ? `${v.toWarehouse.code} — ${v.toWarehouse.name}` : "-"}</TableCell>
-                <TableCell>{new Date(v.createdAt).toLocaleString("vi-VN")}</TableCell>
-              </TableRow>
-            ))}
-            {!vouchers.length ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-muted-foreground">
-                  Chưa có phiếu kho.
-                </TableCell>
-              </TableRow>
-            ) : null}
-          </TableBody>
-        </Table>
+        <FilteredDataTable
+          columns={columns}
+          data={data}
+          emptyText="Chưa có phiếu kho."
+          searchPlaceholder="Tìm theo mã/loại/trạng thái/kho..."
+        />
       </CardContent>
     </Card>
   );
