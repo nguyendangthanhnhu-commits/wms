@@ -1,42 +1,22 @@
 import { NextResponse } from "next/server";
 
-import { prisma } from "@/lib/prisma";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 
 export async function GET() {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const current = await getCurrentUser();
+    if (!current?.authUser) return NextResponse.json({ user: null });
 
-    if (!user) {
-      return NextResponse.json({ user: null });
-    }
-
-    const appUser = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: {
-        id: true,
-        employeeCode: true,
-        fullName: true,
-        role: true,
-      },
-    });
+    const { authUser, appUser } = current;
 
     return NextResponse.json({
-      user: appUser
-        ? {
-            ...appUser,
-            email: user.email,
-          }
-        : {
-            id: user.id,
-            employeeCode: null,
-            fullName: user.email ?? "Unknown",
-            role: null,
-            email: user.email,
-          },
+      user: {
+        id: appUser.id,
+        employeeCode: appUser.employeeCode,
+        fullName: appUser.fullName,
+        role: appUser.role,
+        email: authUser.email ?? null,
+      },
     });
   } catch (error) {
     console.error("[GET /api/auth/me]", error);

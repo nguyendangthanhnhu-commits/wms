@@ -3,8 +3,8 @@ import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
+import { ensurePrismaUserFromAuthUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -35,23 +35,10 @@ export default async function LoginPage({
       redirect("/login?error=invalid_credentials");
     }
 
-    // Ensure Prisma user exists and matches Supabase user id
-    const userId = data.user.id;
-    const employeeCode = `EMP_${userId.replaceAll("-", "").slice(0, 10).toUpperCase()}`;
-    const fullName = data.user.user_metadata?.full_name ?? data.user.email ?? "User";
-
-    await prisma.user.upsert({
-      where: { id: userId },
-      update: {
-        fullName,
-        isActive: true,
-      },
-      create: {
-        id: userId,
-        employeeCode,
-        fullName,
-        isActive: true,
-      },
+    await ensurePrismaUserFromAuthUser({
+      id: data.user.id,
+      email: data.user.email ?? null,
+      user_metadata: (data.user.user_metadata ?? null) as any,
     });
 
     const next =

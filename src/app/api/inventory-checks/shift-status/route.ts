@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 
 function startOfTodayUtc(date = new Date()) {
   const d = new Date(date);
@@ -17,26 +17,19 @@ function endOfTodayUtc(date = new Date()) {
 
 export async function GET() {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const current = await getCurrentUser();
+    if (!current?.appUser) {
       return NextResponse.json({ needsCheck: false });
     }
 
-    const appUser = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: { role: true },
-    });
+    const { appUser } = current;
 
     if (appUser?.role !== "warehouse_keeper" && appUser?.role !== "production_staff") {
       return NextResponse.json({ needsCheck: false });
     }
 
     const assignments = await prisma.warehouseStaffAssignment.findMany({
-      where: { userId: user.id },
+      where: { userId: appUser.id },
       select: { warehouseId: true },
     });
 
