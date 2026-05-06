@@ -40,6 +40,8 @@ export function MobileNav({ items, pathname }: MobileNavProps) {
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch
+                scroll={false}
                 className={cn(
                   "rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
                   active && "bg-accent text-accent-foreground"

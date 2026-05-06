@@ -31,7 +31,7 @@ export default async function VouchersPage() {
             {vouchers.map((v) => (
               <TableRow key={v.id}>
                 <TableCell className="font-medium">
-                  <Link className="underline underline-offset-4" href={`/vouchers/${v.id}`}>
+                  <Link prefetch className="underline underline-offset-4" href={`/vouchers/${v.id}`}>
                     {v.voucherCode}
                   </Link>
                 </TableCell>

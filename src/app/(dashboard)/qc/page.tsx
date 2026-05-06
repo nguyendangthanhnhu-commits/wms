@@ -29,7 +29,7 @@ export default async function QcPage() {
             {evaluations.map((e) => (
               <TableRow key={e.id}>
                 <TableCell className="font-medium">
-                  <Link className="underline underline-offset-4" href={`/qc/${e.id}`}>
+                  <Link prefetch className="underline underline-offset-4" href={`/qc/${e.id}`}>
                     {e.voucher.voucherCode}
                   </Link>
                 </TableCell>

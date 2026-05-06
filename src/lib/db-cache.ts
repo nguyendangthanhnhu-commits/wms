@@ -2,6 +2,23 @@ import { unstable_cache } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
 
+function cacheSeconds(kind: "layout" | "list" | "detail" | "dashboard") {
+  const envGlobal = Number(process.env.DB_CACHE_REVALIDATE_SECONDS ?? "");
+  const byKind = Number(
+    ({
+      layout: process.env.DB_CACHE_LAYOUT_SECONDS,
+      list: process.env.DB_CACHE_LIST_SECONDS,
+      detail: process.env.DB_CACHE_DETAIL_SECONDS,
+      dashboard: process.env.DB_CACHE_DASHBOARD_SECONDS,
+    } as const)[kind] ?? "",
+  );
+
+  const fallback = ({ layout: 120, dashboard: 60, list: 60, detail: 45 } as const)[kind];
+  const resolved = Number.isFinite(byKind) && byKind > 0 ? byKind : fallback;
+  if (Number.isFinite(envGlobal) && envGlobal > 0) return Math.min(resolved, envGlobal);
+  return resolved;
+}
+
 export const getAppUserForLayout = unstable_cache(
   async (userId: string) => {
     return prisma.user.findUnique({
@@ -10,7 +27,7 @@ export const getAppUserForLayout = unstable_cache(
     });
   },
   ["app-user-for-layout"],
-  { revalidate: 60 }
+  { revalidate: cacheSeconds("layout") }
 );
 
 export const getDashboardCounts = unstable_cache(
@@ -26,7 +43,7 @@ export const getDashboardCounts = unstable_cache(
     return { warehouses, products, vouchers, sessions, qc };
   },
   ["dashboard-counts"],
-  { revalidate: 30 }
+  { revalidate: cacheSeconds("dashboard") }
 );
 
 export const listVouchers = unstable_cache(
@@ -46,7 +63,7 @@ export const listVouchers = unstable_cache(
     });
   },
   ["vouchers-list"],
-  { revalidate: 15 }
+  { revalidate: cacheSeconds("list") }
 );
 
 export const getVoucherDetail = unstable_cache(
@@ -70,7 +87,7 @@ export const getVoucherDetail = unstable_cache(
     });
   },
   ["voucher-detail"],
-  { revalidate: 15 }
+  { revalidate: cacheSeconds("detail") }
 );
 
 export const listInventoryCheckSessions = unstable_cache(
@@ -88,7 +105,7 @@ export const listInventoryCheckSessions = unstable_cache(
     });
   },
   ["inventory-check-sessions"],
-  { revalidate: 15 }
+  { revalidate: cacheSeconds("list") }
 );
 
 export const getInventoryCheckSessionDetail = unstable_cache(
@@ -110,7 +127,7 @@ export const getInventoryCheckSessionDetail = unstable_cache(
     });
   },
   ["inventory-check-session-detail"],
-  { revalidate: 15 }
+  { revalidate: cacheSeconds("detail") }
 );
 
 export const listQcEvaluations = unstable_cache(
@@ -128,7 +145,7 @@ export const listQcEvaluations = unstable_cache(
     });
   },
   ["qc-evaluations-list"],
-  { revalidate: 15 }
+  { revalidate: cacheSeconds("list") }
 );
 
 export const getQcEvaluationDetail = unstable_cache(
@@ -153,6 +170,6 @@ export const getQcEvaluationDetail = unstable_cache(
     });
   },
   ["qc-evaluation-detail"],
-  { revalidate: 15 }
+  { revalidate: cacheSeconds("detail") }
 );
 

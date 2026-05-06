@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import useSWR from "swr";
 
 import {
@@ -26,10 +27,17 @@ type ShiftCheckGuardProps = {
 export function ShiftCheckGuard({ role }: ShiftCheckGuardProps) {
   const shouldGuard = role === "warehouse_keeper" || role === "production_staff";
 
-  const { data } = useSWR(shouldGuard ? "/api/inventory-checks/shift-status" : null, fetcher, {
-    revalidateOnFocus: true,
-    dedupingInterval: 2000,
-  });
+  const swrOptions = useMemo(
+    () => ({
+      // Ca kiểm kê không cần realtime: tránh gọi API mỗi lần đổi tab.
+      revalidateOnFocus: false,
+      dedupingInterval: 60000,
+      refreshInterval: shouldGuard ? 5 * 60 * 1000 : 0,
+    }),
+    [shouldGuard]
+  );
+
+  const { data } = useSWR(shouldGuard ? "/api/inventory-checks/shift-status" : null, fetcher, swrOptions);
 
   const needsCheck = Boolean(data?.needsCheck);
 

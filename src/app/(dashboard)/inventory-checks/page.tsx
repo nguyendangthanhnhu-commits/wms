@@ -38,7 +38,7 @@ export default async function InventoryChecksPage() {
                 </TableCell>
                 <TableCell>{new Date(s.shiftDate).toLocaleDateString("vi-VN")}</TableCell>
                 <TableCell>
-                  <Link className="underline underline-offset-4" href={`/inventory-checks/${s.id}`}>
+                  <Link prefetch className="underline underline-offset-4" href={`/inventory-checks/${s.id}`}>
                     Mở
                   </Link>
                 </TableCell>
