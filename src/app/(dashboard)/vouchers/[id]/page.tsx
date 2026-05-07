@@ -4,12 +4,15 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getVoucherDetail } from "@/lib/db-cache";
+import { getCurrentUser } from "@/lib/auth";
+import { VoucherApproveActions } from "@/app/(dashboard)/vouchers/[id]/voucher-approve-actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function VoucherDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
+  const current = await getCurrentUser();
   const voucher = await getVoucherDetail(id);
 
   if (!voucher) notFound();
@@ -18,11 +21,23 @@ export default async function VoucherDetailPage({ params }: { params: Promise<{ 
     <div className="grid gap-4">
       <Card>
         <CardHeader>
-          <CardTitle className="flex flex-wrap items-center gap-2">
-            <span>{voucher.voucherCode}</span>
-            <Badge variant="secondary">{voucher.voucherType}</Badge>
-            <Badge variant={voucher.status === "approved" ? "default" : "secondary"}>{voucher.status}</Badge>
-          </CardTitle>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <CardTitle className="flex flex-wrap items-center gap-2">
+              <span>{voucher.voucherCode}</span>
+              <Badge variant="secondary">{voucher.voucherType}</Badge>
+              <Badge variant={voucher.status === "approved" ? "default" : "secondary"}>{voucher.status}</Badge>
+            </CardTitle>
+            {current?.appUser ? (
+              <VoucherApproveActions
+                voucherId={voucher.id}
+                voucherCode={voucher.voucherCode}
+                status={voucher.status}
+                createdById={voucher.createdById}
+                currentUserId={current.appUser.id}
+                currentUserRole={current.appUser.role}
+              />
+            ) : null}
+          </div>
         </CardHeader>
         <CardContent className="grid gap-2 text-sm">
           <div>

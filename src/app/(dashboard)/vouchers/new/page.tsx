@@ -1,32 +1,47 @@
-import Link from "next/link";
+import { prisma } from "@/lib/prisma";
 
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { PageHeader } from "@/components/shared/PageHeader";
-import { EmptyState } from "@/components/shared/EmptyState";
-import { Button } from "@/components/ui/button";
+import { VoucherForm } from "@/app/(dashboard)/vouchers/new/voucher-form";
 
 export const dynamic = "force-dynamic";
 
-export default function NewVoucherPage() {
+export default async function NewVoucherPage() {
+  const [warehouses, products, salesOrders, whitelist] = await Promise.all([
+    prisma.warehouse.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: "asc" },
+      select: { id: true, code: true, name: true, groupType: true },
+      take: 500,
+    }),
+    prisma.product.findMany({
+      where: { isActive: true },
+      orderBy: { sku: "asc" },
+      select: { id: true, sku: true, name: true, baseUnitId: true, baseUnit: { select: { code: true } } },
+      take: 1000,
+    }),
+    prisma.salesOrder.findMany({
+      where: { status: "confirmed" },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, orderCode: true, customerName: true },
+      take: 200,
+    }),
+    prisma.warehouseProductWhitelist.findMany({
+      select: { warehouseId: true, productId: true },
+      take: 5000,
+    }),
+  ]);
+
   return (
-    <Card>
-      <CardHeader>
-        <PageHeader
-          title="Tạo phiếu kho"
-          description="Màn hình tạo phiếu sẽ được triển khai ở bước tiếp theo (POST /api/vouchers + workflow duyệt)."
-          actions={
-            <Button asChild variant="secondary">
-              <Link href="/vouchers">Quay lại</Link>
-            </Button>
-          }
-        />
-      </CardHeader>
-      <CardContent>
-        <EmptyState
-          title="Chưa triển khai luồng tạo phiếu"
-          description="Hiện tại bạn có thể xem danh sách/chi tiết phiếu demo. Bước tiếp theo: form tạo phiếu + add item + upload ảnh + approve."
-        />
-      </CardContent>
-    </Card>
+    <VoucherForm
+      warehouses={warehouses}
+      products={products.map((p) => ({
+        id: p.id,
+        sku: p.sku,
+        name: p.name,
+        baseUnitId: p.baseUnitId,
+        baseUnitCode: p.baseUnit.code,
+      }))}
+      salesOrders={salesOrders}
+      whitelist={whitelist}
+    />
   );
 }
