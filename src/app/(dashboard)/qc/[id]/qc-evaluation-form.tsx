@@ -23,7 +23,7 @@ import {
 
 type Supplier = { id: string; code: string; name: string };
 type Warehouse = { id: string; code: string; name: string; groupType: string };
-type Staff = { id: string; employeeCode: string; fullName: string; role: string };
+type Staff = { id: string; employeeCode: string; fullName: string; role: string; isActive?: boolean };
 
 type Props = {
   defectReportId: string;
