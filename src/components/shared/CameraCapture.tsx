@@ -3,24 +3,36 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { createClient } from "@/lib/supabase/client";
 
 type CameraCaptureProps = {
   onCapture: (imageUrl: string) => void;
   label?: string;
   required?: boolean;
+  disabled?: boolean;
 };
 
-export function CameraCapture({ onCapture, label = "Chụp ảnh", required }: CameraCaptureProps) {
+export function CameraCapture({ onCapture, label = "Chụp ảnh", required, disabled }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
 
   const sessionId = useMemo(() => crypto.randomUUID(), []);
 
   useEffect(() => {
+    if (!open) return;
     let cancelled = false;
 
     async function start() {
@@ -41,7 +53,7 @@ export function CameraCapture({ onCapture, label = "Chụp ảnh", required }: C
           await videoRef.current.play();
         }
       } catch {
-        setError("Không thể mở camera. Vui lòng cấp quyền và thử lại.");
+        setError("Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập.");
       }
     }
 
@@ -52,14 +64,13 @@ export function CameraCapture({ onCapture, label = "Chụp ảnh", required }: C
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     };
-  }, []);
+  }, [open]);
 
-  async function captureAndUpload() {
+  async function capture() {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
 
-    setBusy(true);
     setError(null);
 
     try {
@@ -75,7 +86,17 @@ export function CameraCapture({ onCapture, label = "Chụp ảnh", required }: C
       );
 
       if (!blob) throw new Error("Không thể tạo ảnh");
+      setCapturedBlob(blob);
+    } catch {
+      setError("Không thể chụp ảnh. Vui lòng thử lại.");
+    }
+  }
 
+  async function uploadAndUse() {
+    if (!capturedBlob) return;
+    setBusy(true);
+    setError(null);
+    try {
       const supabase = createClient();
       const {
         data: { user },
@@ -83,13 +104,12 @@ export function CameraCapture({ onCapture, label = "Chụp ảnh", required }: C
 
       const userId = user?.id ?? "anonymous";
       const timestamp = Date.now();
-      const path = `attachments/attachment_${userId}_${timestamp}_${sessionId}.jpg`;
+      const path = `attachments/${userId}/${timestamp}_${sessionId}.jpg`;
 
-      const { error: uploadError } = await supabase.storage.from("attachments").upload(path, blob, {
+      const { error: uploadError } = await supabase.storage.from("attachments").upload(path, capturedBlob, {
         contentType: "image/jpeg",
         upsert: false,
       });
-
       if (uploadError) throw uploadError;
 
       const {
@@ -97,6 +117,8 @@ export function CameraCapture({ onCapture, label = "Chụp ảnh", required }: C
       } = supabase.storage.from("attachments").getPublicUrl(path);
 
       onCapture(publicUrl);
+      setOpen(false);
+      setCapturedBlob(null);
     } catch {
       setError("Upload ảnh thất bại. Kiểm tra bucket `attachments` và quyền Storage.");
     } finally {
@@ -105,24 +127,52 @@ export function CameraCapture({ onCapture, label = "Chụp ảnh", required }: C
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm font-medium">
           {label}
           {required ? <span className="text-destructive"> *</span> : null}
         </div>
-        <Button type="button" onClick={() => void captureAndUpload()} disabled={busy}>
-          {busy ? "Đang tải..." : "Chụp & lưu"}
+        <Button type="button" variant="secondary" onClick={() => setOpen(true)} disabled={disabled}>
+          Chụp ảnh
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-lg border bg-black">
-        <video ref={videoRef} className="h-56 w-full object-cover" playsInline muted />
-      </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Camera</DialogTitle>
+          </DialogHeader>
 
-      <canvas ref={canvasRef} className="hidden" />
+          {error ? (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
 
-      {error ? <div className="text-sm text-destructive">{error}</div> : null}
+          <div className="overflow-hidden rounded-lg border bg-black">
+            <video ref={videoRef} className="h-72 w-full object-cover" playsInline muted />
+          </div>
+
+          <canvas ref={canvasRef} className="hidden" />
+
+          <DialogFooter className="gap-2 sm:justify-between">
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => setCapturedBlob(null)} disabled={!capturedBlob || busy}>
+                Chụp lại
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="secondary" onClick={() => void capture()} disabled={busy}>
+                Chụp
+              </Button>
+              <Button type="button" onClick={() => void uploadAndUse()} disabled={!capturedBlob || busy}>
+                {busy ? "Đang tải..." : "Dùng ảnh này"}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -32,14 +32,15 @@ export function ShiftCheckGuard({ role }: ShiftCheckGuardProps) {
       // Ca kiểm kê không cần realtime: tránh gọi API mỗi lần đổi tab.
       revalidateOnFocus: false,
       dedupingInterval: 60000,
-      refreshInterval: shouldGuard ? 5 * 60 * 1000 : 0,
+      refreshInterval: shouldGuard ? 60000 : 0,
     }),
     [shouldGuard]
   );
 
-  const { data } = useSWR(shouldGuard ? "/api/inventory-checks/shift-status" : null, fetcher, swrOptions);
+  const { data, isLoading } = useSWR(shouldGuard ? "/api/inventory-checks/shift-status" : null, fetcher, swrOptions);
 
-  const needsCheck = Boolean(data?.needsCheck);
+  // Không block UI khi đang loading; chỉ block khi chắc chắn needsCheck = true.
+  const needsCheck = Boolean(!isLoading && data?.needsCheck);
 
   return (
     <Dialog open={shouldGuard && needsCheck}>
