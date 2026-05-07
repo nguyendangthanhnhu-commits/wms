@@ -6,6 +6,7 @@ const LABELS: Record<string, string> = {
   dashboard: "Tổng quan",
   warehouses: "Kho",
   products: "Sản phẩm",
+  suppliers: "Nhà cung cấp",
   vouchers: "Phiếu kho",
   "inventory-checks": "Kiểm kê",
   staff: "Nhân sự",

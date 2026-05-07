@@ -1,12 +1,18 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { listProducts } from "@/lib/db-cache";
-import { ProductsTable } from "@/app/(dashboard)/products/products-table";
+import { prisma } from "@/lib/prisma";
+import { ProductsCrud } from "@/app/(dashboard)/products/products-crud";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProductsPage() {
   const data = await listProducts();
+  const units = await prisma.unit.findMany({
+    orderBy: { code: "asc" },
+    take: 500,
+    select: { id: true, code: true, name: true },
+  });
 
   return (
     <Card>
@@ -14,7 +20,7 @@ export default async function ProductsPage() {
         <PageHeader title="Sản phẩm" description="Danh sách sản phẩm đang hoạt động" />
       </CardHeader>
       <CardContent>
-        <ProductsTable data={data as any} />
+        <ProductsCrud data={data as any} units={units as any} />
       </CardContent>
     </Card>
   );

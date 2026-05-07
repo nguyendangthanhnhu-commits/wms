@@ -1,12 +1,12 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { listStaff } from "@/lib/db-cache";
-import { StaffTable } from "@/app/(dashboard)/staff/staff-table";
+import { listDepartments, listStaff } from "@/lib/db-cache";
+import { StaffCrud } from "@/app/(dashboard)/staff/staff-crud";
 
 export const dynamic = "force-dynamic";
 
 export default async function StaffPage() {
-  const data = await listStaff();
+  const [data, departments] = await Promise.all([listStaff(), listDepartments()]);
 
   return (
     <Card>
@@ -14,7 +14,7 @@ export default async function StaffPage() {
         <PageHeader title="Nhân sự" description="Danh sách nhân sự đang hoạt động" />
       </CardHeader>
       <CardContent>
-        <StaffTable data={data as any} />
+        <StaffCrud data={data as any} departments={departments as any} />
       </CardContent>
     </Card>
   );

@@ -2,41 +2,7 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
-import { UpdateWarehouseSchema } from "@/lib/schemas/warehouses";
-
-export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await ctx.params;
-
-    const warehouse = await prisma.warehouse.findUnique({
-      where: { id },
-      include: {
-        locations: true,
-        inventory: {
-          include: {
-            product: { select: { sku: true, name: true } },
-            unit: { select: { code: true } },
-          },
-        },
-      },
-    });
-
-    if (!warehouse) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
-    }
-
-    return NextResponse.json(warehouse);
-  } catch (error: unknown) {
-    const code = typeof error === "object" && error !== null && "code" in error ? String((error as any).code) : "";
-
-    if (code === "P1001" || code === "P1017") {
-      return NextResponse.json({ error: "Database temporarily unavailable" }, { status: 503 });
-    }
-
-    console.error("[GET /api/warehouses/[id]]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
+import { UpdateProductSchema } from "@/lib/schemas/products";
 
 export async function PATCH(request: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
@@ -50,22 +16,21 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
 
     const { id } = await ctx.params;
     const body = (await request.json()) as unknown;
-    const parsed = UpdateWarehouseSchema.safeParse(body);
+    const parsed = UpdateProductSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
     const input = parsed.data;
 
-    await prisma.warehouse.update({
+    await prisma.product.update({
       where: { id },
       data: {
-        ...(input.code ? { code: input.code } : {}),
+        ...(input.sku ? { sku: input.sku } : {}),
         ...(input.name ? { name: input.name } : {}),
-        ...(input.groupType ? { groupType: input.groupType as any } : {}),
-        ...(input.description === undefined ? {} : { description: input.description?.trim() || null }),
-        ...(input.capacity === undefined ? {} : { capacity: typeof input.capacity === "number" ? input.capacity : null }),
-        ...(input.managerId === undefined ? {} : { managerId: input.managerId ?? null }),
+        ...(input.productType ? { productType: input.productType } : {}),
+        ...(input.baseUnitId ? { baseUnitId: input.baseUnitId } : {}),
+        ...(typeof input.minStockLevel === "number" ? { minStockLevel: input.minStockLevel } : {}),
         ...(typeof input.isActive === "boolean" ? { isActive: input.isActive } : {}),
-        ...(input.sortOrder === undefined ? {} : { sortOrder: typeof input.sortOrder === "number" ? input.sortOrder : 0 }),
+        ...(input.categoryId === undefined ? {} : { categoryId: input.categoryId }),
       },
       select: { id: true },
     });
@@ -76,7 +41,7 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
     if (code === "P1001" || code === "P1017") {
       return NextResponse.json({ error: "Database temporarily unavailable" }, { status: 503 });
     }
-    console.error("[PATCH /api/warehouses/[id]]", error);
+    console.error("[PATCH /api/products/[id]]", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -93,7 +58,8 @@ export async function DELETE(_: Request, ctx: { params: Promise<{ id: string }> 
 
     const { id } = await ctx.params;
 
-    await prisma.warehouse.update({
+    // soft delete to preserve referential integrity
+    await prisma.product.update({
       where: { id },
       data: { isActive: false },
       select: { id: true },
@@ -105,7 +71,8 @@ export async function DELETE(_: Request, ctx: { params: Promise<{ id: string }> 
     if (code === "P1001" || code === "P1017") {
       return NextResponse.json({ error: "Database temporarily unavailable" }, { status: 503 });
     }
-    console.error("[DELETE /api/warehouses/[id]]", error);
+    console.error("[DELETE /api/products/[id]]", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+

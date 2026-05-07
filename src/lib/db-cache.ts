@@ -122,6 +122,18 @@ export const listStaff = unstable_cache(
   { revalidate: cacheSeconds("list") }
 );
 
+export const listDepartments = unstable_cache(
+  async () => {
+    return prisma.department.findMany({
+      orderBy: { code: "asc" },
+      take: 500,
+      select: { id: true, code: true, name: true },
+    });
+  },
+  ["departments-list"],
+  { revalidate: cacheSeconds("list") }
+);
+
 export const listOrders = unstable_cache(
   async () => {
     return prisma.salesOrder.findMany({

@@ -3,6 +3,7 @@ export const MENU_BY_ROLE = {
     "dashboard",
     "warehouses",
     "products",
+    "suppliers",
     "vouchers",
     "inventory-checks",
     "staff",
