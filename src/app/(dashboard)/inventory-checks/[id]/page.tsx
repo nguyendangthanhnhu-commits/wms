@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getInventoryCheckSessionDetail } from "@/lib/db-cache";
+import { CheckItemsForm } from "@/app/(dashboard)/inventory-checks/[id]/check-items-form";
 
 export const dynamic = "force-dynamic";
 
@@ -36,43 +37,50 @@ export default async function InventoryCheckDetailPage({ params }: { params: Pro
           <CardTitle>Danh sách kiểm</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>SKU</TableHead>
-                <TableHead>Tên</TableHead>
-                <TableHead>Vị trí</TableHead>
-                <TableHead>ĐVT</TableHead>
-                <TableHead>SL hệ thống</TableHead>
-                <TableHead>SL thực tế</TableHead>
-                <TableHead>Lý do</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {session.items.map((it) => (
-                <TableRow key={it.id}>
-                  <TableCell className="font-medium">{it.product.sku}</TableCell>
-                  <TableCell>{it.product.name}</TableCell>
-                  <TableCell>
-                    {it.location?.barcode ??
-                      [it.location?.rack, it.location?.shelf, it.location?.bin].filter(Boolean).join("-") ??
-                      "-"}
-                  </TableCell>
-                  <TableCell>{it.unit.code}</TableCell>
-                  <TableCell>{it.systemQty}</TableCell>
-                  <TableCell>{it.actualQty ?? "-"}</TableCell>
-                  <TableCell>{it.discrepancyReason ?? "-"}</TableCell>
-                </TableRow>
-              ))}
-              {!session.items.length ? (
+          {session.status === "in_progress" ? (
+            <CheckItemsForm sessionId={session.id} status={session.status} items={session.items as any} />
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-muted-foreground">
-                    Chưa có dòng kiểm kê.
-                  </TableCell>
+                  <TableHead>SKU</TableHead>
+                  <TableHead>Tên</TableHead>
+                  <TableHead>Vị trí</TableHead>
+                  <TableHead>ĐVT</TableHead>
+                  <TableHead>SL hệ thống</TableHead>
+                  <TableHead>SL thực tế</TableHead>
+                  <TableHead>Lý do</TableHead>
                 </TableRow>
-              ) : null}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {session.items.map((it) => (
+                  <TableRow
+                    key={it.id}
+                    className={it.actualQty !== null && it.actualQty !== it.systemQty ? "bg-destructive/5" : undefined}
+                  >
+                    <TableCell className="font-medium">{it.product.sku}</TableCell>
+                    <TableCell>{it.product.name}</TableCell>
+                    <TableCell>
+                      {it.location?.barcode ??
+                        [it.location?.rack, it.location?.shelf, it.location?.bin].filter(Boolean).join("-") ??
+                        "-"}
+                    </TableCell>
+                    <TableCell>{it.unit.code}</TableCell>
+                    <TableCell>{it.systemQty}</TableCell>
+                    <TableCell>{it.actualQty ?? "-"}</TableCell>
+                    <TableCell>{it.discrepancyReason ?? "-"}</TableCell>
+                  </TableRow>
+                ))}
+                {!session.items.length ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-muted-foreground">
+                      Chưa có dòng kiểm kê.
+                    </TableCell>
+                  </TableRow>
+                ) : null}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
