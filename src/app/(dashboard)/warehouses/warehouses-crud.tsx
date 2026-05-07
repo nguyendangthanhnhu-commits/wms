@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -52,7 +53,7 @@ export function WarehousesCrud({ data, managers }: { data: Row[]; managers: Mana
   const [name, setName] = useState("");
   const [groupType, setGroupType] = useState("production");
   const [sortOrder, setSortOrder] = useState<string>("0");
-  const [managerId, setManagerId] = useState<string>("");
+  const [managerId, setManagerId] = useState<string>("__none__");
   const [description, setDescription] = useState<string>("");
 
   function resetForm() {
@@ -60,7 +61,7 @@ export function WarehousesCrud({ data, managers }: { data: Row[]; managers: Mana
     setName("");
     setGroupType("production");
     setSortOrder("0");
-    setManagerId("");
+    setManagerId("__none__");
     setDescription("");
   }
 
@@ -89,7 +90,7 @@ export function WarehousesCrud({ data, managers }: { data: Row[]; managers: Mana
         name,
         groupType,
         sortOrder: Number(sortOrder || "0"),
-        managerId: managerId || undefined,
+        managerId: managerId === "__none__" ? undefined : managerId,
         description: description || undefined,
       };
 
@@ -195,6 +196,7 @@ export function WarehousesCrud({ data, managers }: { data: Row[]; managers: Mana
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>{editing ? "Sửa kho" : "Thêm kho"}</DialogTitle>
+            <DialogDescription>Nhập thông tin kho và bấm Lưu để áp dụng thay đổi.</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-3">
@@ -238,7 +240,7 @@ export function WarehousesCrud({ data, managers }: { data: Row[]; managers: Mana
                   <SelectValue placeholder="Chọn quản lý" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">-</SelectItem>
+                  <SelectItem value="__none__">-</SelectItem>
                   {managers.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
                       {m.employeeCode} — {m.fullName}

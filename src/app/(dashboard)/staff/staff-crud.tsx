@@ -14,6 +14,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -59,14 +60,14 @@ export function StaffCrud({ data, departments }: { data: Row[]; departments: Dep
   const [employeeCode, setEmployeeCode] = useState("");
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<(typeof roleOptions)[number]>("production_staff");
-  const [departmentId, setDepartmentId] = useState<string>("");
+  const [departmentId, setDepartmentId] = useState<string>("__none__");
   const [phone, setPhone] = useState<string>("");
 
   function resetForm() {
     setEmployeeCode("");
     setFullName("");
     setRole("production_staff");
-    setDepartmentId("");
+    setDepartmentId("__none__");
     setPhone("");
   }
 
@@ -81,7 +82,7 @@ export function StaffCrud({ data, departments }: { data: Row[]; departments: Dep
     setEmployeeCode(row.employeeCode);
     setFullName(row.fullName);
     setRole(row.role as any);
-    setDepartmentId("");
+    setDepartmentId("__none__");
     setPhone("");
     setOpen(true);
   }
@@ -93,7 +94,7 @@ export function StaffCrud({ data, departments }: { data: Row[]; departments: Dep
         employeeCode,
         fullName,
         role,
-        departmentId: departmentId || undefined,
+        departmentId: departmentId === "__none__" ? undefined : departmentId,
         phone: phone || undefined,
       };
 
@@ -200,6 +201,7 @@ export function StaffCrud({ data, departments }: { data: Row[]; departments: Dep
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>{editing ? "Sửa nhân sự" : "Thêm nhân sự"}</DialogTitle>
+            <DialogDescription>Nhập thông tin nhân sự và bấm Lưu để áp dụng thay đổi.</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-3">
@@ -237,7 +239,7 @@ export function StaffCrud({ data, departments }: { data: Row[]; departments: Dep
                     <SelectValue placeholder="Chọn phòng ban" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">-</SelectItem>
+                    <SelectItem value="__none__">-</SelectItem>
                     {departments.map((d) => (
                       <SelectItem key={d.id} value={d.id}>
                         {d.code} — {d.name}

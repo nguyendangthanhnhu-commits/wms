@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -184,6 +185,7 @@ export function SuppliersCrud({ data }: { data: Row[] }) {
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>{editing ? "Sửa nhà cung cấp" : "Thêm nhà cung cấp"}</DialogTitle>
+            <DialogDescription>Nhập thông tin nhà cung cấp và bấm Lưu để áp dụng thay đổi.</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-3">

@@ -14,6 +14,7 @@ import { FilteredDataTable } from "@/components/shared/FilteredDataTable";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -196,6 +197,7 @@ export function ProductsCrud({ data, units }: { data: Row[]; units: Unit[] }) {
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>{editing ? "Sửa sản phẩm" : "Thêm sản phẩm"}</DialogTitle>
+            <DialogDescription>Nhập thông tin sản phẩm và bấm Lưu để áp dụng thay đổi.</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-3">
