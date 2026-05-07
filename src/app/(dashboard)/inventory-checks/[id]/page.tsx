@@ -5,12 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getInventoryCheckSessionDetail } from "@/lib/db-cache";
 import { CheckItemsForm } from "@/app/(dashboard)/inventory-checks/[id]/check-items-form";
+import { getCurrentUser } from "@/lib/auth";
+import { ApproveInventoryCheckActions } from "@/app/(dashboard)/inventory-checks/[id]/approve-actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function InventoryCheckDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
+  const current = await getCurrentUser();
   const session = await getInventoryCheckSessionDetail(id);
 
   if (!session) notFound();
@@ -25,6 +28,13 @@ export default async function InventoryCheckDetailPage({ params }: { params: Pro
             </span>
             <Badge variant="secondary">{session.checkType}</Badge>
             <Badge variant={session.status === "completed" ? "default" : "secondary"}>{session.status}</Badge>
+            {current?.appUser ? (
+              <ApproveInventoryCheckActions
+                sessionId={session.id}
+                status={session.status}
+                currentUserRole={current.appUser.role}
+              />
+            ) : null}
           </CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">

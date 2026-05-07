@@ -48,7 +48,7 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
     const parsed = PatchInventoryCheckSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
-    const { action, items } = parsed.data;
+    const { action, items, photos } = parsed.data;
 
     const result = await prisma.$transaction(async (tx) => {
       const session = await tx.inventoryCheckSession.findUnique({
@@ -105,6 +105,17 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
           where: { id },
           data: { status: "completed", completedAt: new Date() },
         });
+
+        if (photos?.length) {
+          await tx.inventoryCheckPhoto.createMany({
+            data: photos.map((p) => ({
+              sessionId: id,
+              imageUrl: p.imageUrl,
+              takenAt: new Date(p.takenAt),
+              takenById: current.appUser.id,
+            })),
+          });
+        }
 
         // notify managers (simple: notify all warehouse_manager + admin)
         const managers = await tx.user.findMany({

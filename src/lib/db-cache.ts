@@ -336,6 +336,64 @@ export const listQcEvaluations = unstable_cache(
   { revalidate: cacheSeconds("list") }
 );
 
+export const listDefectReportsPendingQc = unstable_cache(
+  async () => {
+    return prisma.defectReport.findMany({
+      where: { status: "pending_qc" },
+      orderBy: { reportedAt: "desc" },
+      take: 200,
+      select: {
+        id: true,
+        status: true,
+        reportedAt: true,
+        quantity: true,
+        lotNumber: true,
+        product: { select: { sku: true, name: true } },
+        unit: { select: { code: true } },
+        voucher: { select: { id: true, voucherCode: true } },
+        discoveredWarehouse: { select: { code: true, name: true } },
+        reportedBy: { select: { employeeCode: true, fullName: true } },
+      },
+    });
+  },
+  ["defect-reports-pending-qc"],
+  { revalidate: cacheSeconds("list") }
+);
+
+export const getDefectReportDetail = unstable_cache(
+  async (id: string) => {
+    return prisma.defectReport.findUnique({
+      where: { id },
+      include: {
+        product: { select: { sku: true, name: true } },
+        unit: { select: { code: true } },
+        discoveredWarehouse: { select: { code: true, name: true } },
+        reportedBy: { select: { employeeCode: true, fullName: true } },
+        voucher: { include: { attachments: true } },
+      },
+    });
+  },
+  ["defect-report-detail"],
+  { revalidate: cacheSeconds("detail") }
+);
+
+export const getQcEvaluationByDefectReportId = unstable_cache(
+  async (defectReportId: string) => {
+    return prisma.qcEvaluation.findUnique({
+      where: { defectReportId },
+      include: {
+        voucher: { select: { id: true, voucherCode: true, voucherType: true, status: true } },
+        supplier: { select: { code: true, name: true } },
+        evaluatedBy: { select: { employeeCode: true, fullName: true } },
+        responsibleWarehouse: { select: { code: true, name: true } },
+        responsibleUser: { select: { employeeCode: true, fullName: true } },
+      },
+    });
+  },
+  ["qc-evaluation-by-defect-report"],
+  { revalidate: cacheSeconds("detail") }
+);
+
 export const getQcEvaluationDetail = unstable_cache(
   async (id: string) => {
     return prisma.qcEvaluation.findUnique({

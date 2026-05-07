@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { getVoucherDetail } from "@/lib/db-cache";
 import { getCurrentUser } from "@/lib/auth";
 import { VoucherApproveActions } from "@/app/(dashboard)/vouchers/[id]/voucher-approve-actions";
+import { VoucherConfirmItems } from "@/app/(dashboard)/vouchers/[id]/voucher-confirm-items";
 
 export const dynamic = "force-dynamic";
 
@@ -102,6 +103,31 @@ export default async function VoucherDetailPage({ params }: { params: Promise<{ 
           </Table>
         </CardContent>
       </Card>
+
+      {voucher.status === "approved" && current?.appUser ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Xác nhận phiếu</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <VoucherConfirmItems
+              voucherId={voucher.id}
+              voucherCode={voucher.voucherCode}
+              status={voucher.status}
+              currentUserRole={current.appUser.role}
+              items={voucher.items.map((it) => ({
+                id: it.id,
+                plannedQty: it.plannedQty,
+                actualQty: it.actualQty ?? null,
+                lotNumber: it.lotNumber ?? null,
+                note: it.note ?? null,
+                product: { sku: it.product.sku, name: it.product.name },
+                unit: { code: it.unit.code },
+              }))}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
       {voucher.defectReport ? (
         <Card>

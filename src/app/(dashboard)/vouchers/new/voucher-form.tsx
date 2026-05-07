@@ -24,6 +24,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ExcelImport, type ImportRow, type TemplateColumn } from "@/components/shared/ExcelImport";
 
 type Warehouse = { id: string; code: string; name: string; groupType: string };
 type Product = { id: string; sku: string; name: string; baseUnitId: string; baseUnitCode: string };
@@ -77,6 +79,7 @@ export function VoucherForm({ warehouses, products, salesOrders, whitelist }: Pr
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [submitting, setSubmitting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pnMode, setPnMode] = useState<"manual" | "import">("manual");
 
   const form = useForm<CreateVoucherFormValues>({
     resolver: zodResolver(CreateVoucherSchema),
@@ -115,6 +118,63 @@ export function VoucherForm({ warehouses, products, salesOrders, whitelist }: Pr
   const allowedWarehouses = useMemo(() => allowedWarehousesByType(voucherType, warehouses), [voucherType, warehouses]);
 
   const productById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
+  const productBySku = useMemo(() => new Map(products.map((p) => [p.sku.toLowerCase(), p])), [products]);
+
+  const pnTemplateColumns: TemplateColumn[] = useMemo(
+    () => [
+      { key: "sku", label: "SKU sản phẩm", required: true },
+      { key: "quantity", label: "Số lượng", required: true },
+      { key: "unit", label: "Đơn vị", required: true },
+      { key: "lotNumber", label: "Số lô", required: false },
+      { key: "manufactureDate", label: "Ngày SX", required: false },
+      { key: "expiryDate", label: "Hạn dùng", required: false },
+      { key: "note", label: "Ghi chú", required: false },
+    ],
+    []
+  );
+
+  function applyPnImport(rows: ImportRow[]) {
+    const nextItems: Array<{ productId: string; unitId: string; plannedQty: number; lotNumber?: string; note?: string }> = [];
+    const errors: string[] = [];
+
+    rows.forEach((r, idx) => {
+      const sku = String(r.sku ?? "").trim();
+      const qtyRaw = r.quantity;
+      const unit = String(r.unit ?? "").trim();
+      const lotNumber = String(r.lotNumber ?? "").trim();
+      const note = String(r.note ?? "").trim();
+
+      const p = productBySku.get(sku.toLowerCase());
+      if (!p) errors.push(`Dòng ${idx + 2}: SKU không tồn tại: "${sku}"`);
+
+      const qty = typeof qtyRaw === "number" ? qtyRaw : Number(String(qtyRaw ?? "").trim());
+      if (!Number.isFinite(qty) || qty <= 0) errors.push(`Dòng ${idx + 2}: Số lượng không hợp lệ`);
+
+      if (p && unit && unit !== p.baseUnitCode) {
+        errors.push(`Dòng ${idx + 2}: Đơn vị "${unit}" không khớp ĐVT gốc (${p.baseUnitCode})`);
+      }
+
+      if (p && Number.isFinite(qty) && qty > 0) {
+        nextItems.push({
+          productId: p.id,
+          unitId: p.baseUnitId,
+          plannedQty: qty,
+          ...(lotNumber ? { lotNumber } : {}),
+          ...(note ? { note } : {}),
+        });
+      }
+    });
+
+    if (errors.length) {
+      toast.error("Import có lỗi", { description: errors.slice(0, 3).join(" | ") });
+      return;
+    }
+
+    // replace field array
+    remove();
+    nextItems.forEach((it) => append(it as any));
+    toast.success("Đã import dữ liệu từ Excel", { description: `${nextItems.length} dòng` });
+  }
 
   async function submit(values: CreateVoucherFormValues) {
     setSubmitting(true);
@@ -333,109 +393,238 @@ export function VoucherForm({ warehouses, products, salesOrders, whitelist }: Pr
 
         {step === 3 ? (
           <div className="grid gap-3">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-semibold">Danh sách sản phẩm</div>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => append({ productId: "", unitId: "", plannedQty: 1 } as any)}
-              >
-                + Thêm dòng
-              </Button>
-            </div>
+            {voucherType === "PN" ? (
+              <Tabs value={pnMode} onValueChange={(v) => setPnMode(v as any)}>
+                <TabsList className="w-fit">
+                  <TabsTrigger value="manual">Nhập thủ công</TabsTrigger>
+                  <TabsTrigger value="import">Import Excel</TabsTrigger>
+                </TabsList>
+                <TabsContent value="import" className="mt-3">
+                  <ExcelImport templateColumns={pnTemplateColumns} onImport={applyPnImport} />
+                </TabsContent>
+                <TabsContent value="manual" className="mt-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-semibold">Danh sách sản phẩm</div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => append({ productId: "", unitId: "", plannedQty: 1 } as any)}
+                    >
+                      + Thêm dòng
+                    </Button>
+                  </div>
 
-            <div className="grid gap-3">
-              {fields.map((f, idx) => {
-                const productId = form.watch(`items.${idx}.productId` as const);
-                const p = productId ? productById.get(productId) : undefined;
-                const unitText = p ? p.baseUnitCode : "-";
+                  <div className="grid gap-3">
+                    {fields.map((f, idx) => {
+                      const productId = form.watch(`items.${idx}.productId` as const);
+                      const p = productId ? productById.get(productId) : undefined;
+                      const unitText = p ? p.baseUnitCode : "-";
 
-                return (
-                  <Card key={f.id} className="border-dashed">
-                    <CardContent className="grid gap-3 p-4">
-                      <div className="grid gap-2 md:grid-cols-3">
-                        <div className="grid gap-2 md:col-span-2">
-                          <Label>Sản phẩm</Label>
-                          <Select
-                            value={productId ?? ""}
-                            onValueChange={(v) => {
-                              const prod = productById.get(v);
-                              update(idx, {
-                                ...(form.getValues(`items.${idx}` as const) as any),
-                                productId: v,
-                                unitId: prod?.baseUnitId ?? "",
-                              } as any);
-                              form.trigger(`items.${idx}` as any);
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Chọn sản phẩm" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {allowedProducts.map((x) => (
-                                <SelectItem key={x.id} value={x.id}>
-                                  {x.sku} — {x.name} ({x.baseUnitCode})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      return (
+                        <Card key={f.id} className="border-dashed">
+                          <CardContent className="grid gap-3 p-4">
+                            <div className="grid gap-2 md:grid-cols-3">
+                              <div className="grid gap-2 md:col-span-2">
+                                <Label>Sản phẩm</Label>
+                                <Select
+                                  value={productId ?? ""}
+                                  onValueChange={(v) => {
+                                    const prod = productById.get(v);
+                                    update(idx, {
+                                      ...(form.getValues(`items.${idx}` as const) as any),
+                                      productId: v,
+                                      unitId: prod?.baseUnitId ?? "",
+                                    } as any);
+                                    form.trigger(`items.${idx}` as any);
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Chọn sản phẩm" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {allowedProducts.map((x) => (
+                                      <SelectItem key={x.id} value={x.id}>
+                                        {x.sku} — {x.name} ({x.baseUnitCode})
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
 
-                        <div className="grid gap-2">
-                          <Label>Số lượng (ĐVT: {unitText})</Label>
-                          {(() => {
-                            const plannedQty = form.watch(`items.${idx}.plannedQty` as const) as unknown as
-                              | number
-                              | undefined;
-                            return (
-                          <Input
-                            type="number"
-                            min={0}
-                            step="0.01"
-                            value={plannedQty ?? ""}
-                            onChange={(e) =>
-                              form.setValue(`items.${idx}.plannedQty` as const, Number(e.target.value), {
-                                shouldValidate: true,
-                              })
-                            }
-                          />
-                            );
-                          })()}
-                        </div>
-                      </div>
+                              <div className="grid gap-2">
+                                <Label>Số lượng (ĐVT: {unitText})</Label>
+                                {(() => {
+                                  const plannedQty = form.watch(`items.${idx}.plannedQty` as const) as unknown as
+                                    | number
+                                    | undefined;
+                                  return (
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      step="0.01"
+                                      value={plannedQty ?? ""}
+                                      onChange={(e) =>
+                                        form.setValue(`items.${idx}.plannedQty` as const, Number(e.target.value), {
+                                          shouldValidate: true,
+                                        })
+                                      }
+                                    />
+                                  );
+                                })()}
+                              </div>
+                            </div>
 
-                      <div className="grid gap-2 md:grid-cols-2">
-                        <div className="grid gap-2">
-                          <Label>Lot (optional)</Label>
-                          <Input
-                            value={form.watch(`items.${idx}.lotNumber` as const) ?? ""}
-                            onChange={(e) =>
-                              form.setValue(`items.${idx}.lotNumber` as const, e.target.value || undefined)
-                            }
-                            placeholder="VD: LOT-2026-0001"
-                          />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label>Ghi chú dòng (optional)</Label>
-                          <Input
-                            value={form.watch(`items.${idx}.note` as const) ?? ""}
-                            onChange={(e) => form.setValue(`items.${idx}.note` as const, e.target.value || undefined)}
-                            placeholder="Ghi chú..."
-                          />
-                        </div>
-                      </div>
+                            <div className="grid gap-2 md:grid-cols-2">
+                              <div className="grid gap-2">
+                                <Label>Lot (optional)</Label>
+                                <Input
+                                  value={form.watch(`items.${idx}.lotNumber` as const) ?? ""}
+                                  onChange={(e) =>
+                                    form.setValue(`items.${idx}.lotNumber` as const, e.target.value || undefined)
+                                  }
+                                  placeholder="VD: LOT-2026-0001"
+                                />
+                              </div>
+                              <div className="grid gap-2">
+                                <Label>Ghi chú dòng (optional)</Label>
+                                <Input
+                                  value={form.watch(`items.${idx}.note` as const) ?? ""}
+                                  onChange={(e) => form.setValue(`items.${idx}.note` as const, e.target.value || undefined)}
+                                  placeholder="Ghi chú..."
+                                />
+                              </div>
+                            </div>
 
-                      <Separator />
-                      <div className="flex justify-end">
-                        <Button type="button" variant="destructive" onClick={() => remove(idx)} disabled={fields.length <= 1}>
-                          Xóa dòng
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+                            <Separator />
+                            <div className="flex justify-end">
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={() => remove(idx)}
+                                disabled={fields.length <= 1}
+                              >
+                                Xóa dòng
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </TabsContent>
+              </Tabs>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-semibold">Danh sách sản phẩm</div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => append({ productId: "", unitId: "", plannedQty: 1 } as any)}
+                  >
+                    + Thêm dòng
+                  </Button>
+                </div>
+
+                <div className="grid gap-3">
+                  {fields.map((f, idx) => {
+                    const productId = form.watch(`items.${idx}.productId` as const);
+                    const p = productId ? productById.get(productId) : undefined;
+                    const unitText = p ? p.baseUnitCode : "-";
+
+                    return (
+                      <Card key={f.id} className="border-dashed">
+                        <CardContent className="grid gap-3 p-4">
+                          <div className="grid gap-2 md:grid-cols-3">
+                            <div className="grid gap-2 md:col-span-2">
+                              <Label>Sản phẩm</Label>
+                              <Select
+                                value={productId ?? ""}
+                                onValueChange={(v) => {
+                                  const prod = productById.get(v);
+                                  update(idx, {
+                                    ...(form.getValues(`items.${idx}` as const) as any),
+                                    productId: v,
+                                    unitId: prod?.baseUnitId ?? "",
+                                  } as any);
+                                  form.trigger(`items.${idx}` as any);
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Chọn sản phẩm" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {allowedProducts.map((x) => (
+                                    <SelectItem key={x.id} value={x.id}>
+                                      {x.sku} — {x.name} ({x.baseUnitCode})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="grid gap-2">
+                              <Label>Số lượng (ĐVT: {unitText})</Label>
+                              {(() => {
+                                const plannedQty = form.watch(`items.${idx}.plannedQty` as const) as unknown as
+                                  | number
+                                  | undefined;
+                                return (
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    step="0.01"
+                                    value={plannedQty ?? ""}
+                                    onChange={(e) =>
+                                      form.setValue(`items.${idx}.plannedQty` as const, Number(e.target.value), {
+                                        shouldValidate: true,
+                                      })
+                                    }
+                                  />
+                                );
+                              })()}
+                            </div>
+                          </div>
+
+                          <div className="grid gap-2 md:grid-cols-2">
+                            <div className="grid gap-2">
+                              <Label>Lot (optional)</Label>
+                              <Input
+                                value={form.watch(`items.${idx}.lotNumber` as const) ?? ""}
+                                onChange={(e) =>
+                                  form.setValue(`items.${idx}.lotNumber` as const, e.target.value || undefined)
+                                }
+                                placeholder="VD: LOT-2026-0001"
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label>Ghi chú dòng (optional)</Label>
+                              <Input
+                                value={form.watch(`items.${idx}.note` as const) ?? ""}
+                                onChange={(e) => form.setValue(`items.${idx}.note` as const, e.target.value || undefined)}
+                                placeholder="Ghi chú..."
+                              />
+                            </div>
+                          </div>
+
+                          <Separator />
+                          <div className="flex justify-end">
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              onClick={() => remove(idx)}
+                              disabled={fields.length <= 1}
+                            >
+                              Xóa dòng
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         ) : null}
 

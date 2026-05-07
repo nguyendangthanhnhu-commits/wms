@@ -16,6 +16,14 @@ export type CreateInventoryCheckFormValues = z.input<typeof CreateInventoryCheck
 
 export const PatchInventoryCheckSchema = z.object({
   action: z.enum(["save", "complete"]),
+  photos: z
+    .array(
+      z.object({
+        imageUrl: z.string().url(),
+        takenAt: z.string(),
+      })
+    )
+    .optional(),
   items: z.array(
     z.object({
       id: z.string().uuid(),
