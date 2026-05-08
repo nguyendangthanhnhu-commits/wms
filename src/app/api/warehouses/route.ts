@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { revalidateTags } from "@/lib/api-handler";
 import { CreateWarehouseSchema } from "@/lib/schemas/warehouses";
 
 export async function GET() {
@@ -62,6 +63,7 @@ export async function POST(request: Request) {
       select: { id: true },
     });
 
+    revalidateTags("warehouses");
     return NextResponse.json({ success: true, id: created.id });
   } catch (error: unknown) {
     const code = typeof error === "object" && error !== null && "code" in error ? String((error as any).code) : "";

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { revalidateTags, withAuth } from "@/lib/api-handler";
 import { QcEvaluateSchema } from "@/lib/schemas/qc-evaluate";
 
 type Tx = Parameters<typeof prisma.$transaction>[0] extends (tx: infer T) => any ? T : never;
@@ -115,22 +115,12 @@ async function adjustInventoryTransfer(args: {
   return { ok: true as const };
 }
 
-export async function POST(request: Request, ctx: { params: Promise<{ id: string }> }) {
-  try {
-    const current = await getCurrentUser();
-    if (!current?.appUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const role = current.appUser.role;
-    if (role !== "admin" && role !== "qc_officer") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const { id } = await ctx.params; // defectReportId
+export const POST = withAuth<{ id: string }>(
+  async (request, { params, user }) => {
+    const current = user;
+    const { id } = await params; // defectReportId
     const body = (await request.json()) as unknown;
-    const parsed = QcEvaluateSchema.safeParse(body);
-    if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-
-    const input = parsed.data;
+    const input = QcEvaluateSchema.parse(body);
 
     const result = await prisma.$transaction(async (tx) => {
       const defect = await tx.defectReport.findUnique({
@@ -280,7 +270,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
       }
 
       return { success: true as const, evaluationId: evaluation.id, voucherCode: pqc.voucherCode };
-    });
+    }, { timeout: 10000, maxWait: 5000 });
 
     if ("error" in result) {
       if (result.error === "Not found") return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -294,15 +284,9 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
+    revalidateTags("qc", "defect-reports", "vouchers", "inventory", "dashboard-stats");
     return NextResponse.json(result);
-  } catch (error: unknown) {
-    const code = typeof error === "object" && error !== null && "code" in error ? String((error as any).code) : "";
-    if (code === "P1001" || code === "P1017") {
-      return NextResponse.json({ error: "Database temporarily unavailable" }, { status: 503 });
-    }
-
-    console.error("[POST /api/qc/[id]/evaluate]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
+  },
+  { roles: ["admin", "qc_officer"] }
+);
 

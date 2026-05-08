@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 import { AppProviders } from "@/components/providers/app-providers";
 
@@ -30,6 +31,14 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
+        <NextTopLoader
+          color="#0ea5e9"
+          height={2}
+          shadow="0 0 6px #0ea5e9, 0 0 4px #0ea5e9"
+          showSpinner={false}
+          crawl
+          easing="ease"
+        />
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

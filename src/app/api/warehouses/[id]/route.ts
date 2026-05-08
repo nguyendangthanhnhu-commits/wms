@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { revalidateTags } from "@/lib/api-handler";
 import { UpdateWarehouseSchema } from "@/lib/schemas/warehouses";
 
 export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -70,6 +71,7 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
       select: { id: true },
     });
 
+    revalidateTags("warehouses");
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     const code = typeof error === "object" && error !== null && "code" in error ? String((error as any).code) : "";
@@ -99,6 +101,7 @@ export async function DELETE(_: Request, ctx: { params: Promise<{ id: string }> 
       select: { id: true },
     });
 
+    revalidateTags("warehouses");
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     const code = typeof error === "object" && error !== null && "code" in error ? String((error as any).code) : "";

@@ -7,12 +7,14 @@ import { ProductsCrud } from "@/app/(dashboard)/products/products-crud";
 export const dynamic = "force-dynamic";
 
 export default async function ProductsPage() {
-  const data = await listProducts();
-  const units = await prisma.unit.findMany({
-    orderBy: { code: "asc" },
-    take: 500,
-    select: { id: true, code: true, name: true },
-  });
+  const [data, units] = await Promise.all([
+    listProducts(),
+    prisma.unit.findMany({
+      orderBy: { code: "asc" },
+      take: 500,
+      select: { id: true, code: true, name: true },
+    }),
+  ]);
 
   return (
     <Card>

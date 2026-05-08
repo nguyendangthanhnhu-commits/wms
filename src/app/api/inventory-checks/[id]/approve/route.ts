@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { revalidateTags } from "@/lib/api-handler";
 
 export async function PUT(_: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
@@ -106,7 +107,7 @@ export async function PUT(_: Request, ctx: { params: Promise<{ id: string }> }) 
       });
 
       return { success: true as const };
-    });
+    }, { timeout: 10000, maxWait: 5000 });
 
     if ("error" in result) {
       if (result.error === "Not found") return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -114,6 +115,7 @@ export async function PUT(_: Request, ctx: { params: Promise<{ id: string }> }) 
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
+    revalidateTags("inventory-checks", "warehouses", "dashboard-stats");
     return NextResponse.json(result);
   } catch (error: unknown) {
     const code = typeof error === "object" && error !== null && "code" in error ? String((error as any).code) : "";

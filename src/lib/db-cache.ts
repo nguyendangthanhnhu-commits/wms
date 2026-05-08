@@ -27,7 +27,7 @@ export const getAppUserForLayout = unstable_cache(
     });
   },
   ["app-user-for-layout"],
-  { revalidate: cacheSeconds("layout") }
+  { revalidate: cacheSeconds("layout"), tags: ["users"] }
 );
 
 export const listWarehouses = unstable_cache(
@@ -47,7 +47,7 @@ export const listWarehouses = unstable_cache(
     });
   },
   ["warehouses-list"],
-  { revalidate: cacheSeconds("list") }
+  { revalidate: cacheSeconds("list"), tags: ["warehouses"] }
 );
 
 export const getWarehouseDetail = unstable_cache(
@@ -66,7 +66,7 @@ export const getWarehouseDetail = unstable_cache(
     });
   },
   ["warehouse-detail"],
-  { revalidate: cacheSeconds("detail") }
+  { revalidate: cacheSeconds("detail"), tags: ["warehouses"] }
 );
 
 export const listProducts = unstable_cache(
@@ -85,7 +85,7 @@ export const listProducts = unstable_cache(
     });
   },
   ["products-list"],
-  { revalidate: cacheSeconds("list") }
+  { revalidate: cacheSeconds("list"), tags: ["products"] }
 );
 
 export const getProductDetail = unstable_cache(
@@ -100,7 +100,7 @@ export const getProductDetail = unstable_cache(
     });
   },
   ["product-detail"],
-  { revalidate: cacheSeconds("detail") }
+  { revalidate: cacheSeconds("detail"), tags: ["products"] }
 );
 
 export const listStaff = unstable_cache(
@@ -119,7 +119,7 @@ export const listStaff = unstable_cache(
     });
   },
   ["staff-list"],
-  { revalidate: cacheSeconds("list") }
+  { revalidate: cacheSeconds("list"), tags: ["staff", "users"] }
 );
 
 export const listDepartments = unstable_cache(
@@ -131,7 +131,7 @@ export const listDepartments = unstable_cache(
     });
   },
   ["departments-list"],
-  { revalidate: cacheSeconds("list") }
+  { revalidate: cacheSeconds("list"), tags: ["departments"] }
 );
 
 export const listOrders = unstable_cache(
@@ -151,7 +151,7 @@ export const listOrders = unstable_cache(
     });
   },
   ["orders-list"],
-  { revalidate: cacheSeconds("list") }
+  { revalidate: cacheSeconds("list"), tags: ["orders"] }
 );
 
 export const getOrderDetail = unstable_cache(
@@ -170,7 +170,7 @@ export const getOrderDetail = unstable_cache(
     });
   },
   ["order-detail"],
-  { revalidate: cacheSeconds("detail") }
+  { revalidate: cacheSeconds("detail"), tags: ["orders"] }
 );
 
 export const listBomVersions = unstable_cache(
@@ -188,7 +188,7 @@ export const listBomVersions = unstable_cache(
     });
   },
   ["bom-versions-list"],
-  { revalidate: cacheSeconds("list") }
+  { revalidate: cacheSeconds("list"), tags: ["bom"] }
 );
 
 export const getBomVersionDetail = unstable_cache(
@@ -207,7 +207,7 @@ export const getBomVersionDetail = unstable_cache(
     });
   },
   ["bom-version-detail"],
-  { revalidate: cacheSeconds("detail") }
+  { revalidate: cacheSeconds("detail"), tags: ["bom"] }
 );
 
 export const listProductionOutputs = unstable_cache(
@@ -227,7 +227,7 @@ export const listProductionOutputs = unstable_cache(
     });
   },
   ["production-outputs-list"],
-  { revalidate: cacheSeconds("list") }
+  { revalidate: cacheSeconds("list"), tags: ["production"] }
 );
 
 export const getDashboardCounts = unstable_cache(
@@ -243,7 +243,7 @@ export const getDashboardCounts = unstable_cache(
     return { warehouses, products, vouchers, sessions, qc };
   },
   ["dashboard-counts"],
-  { revalidate: cacheSeconds("dashboard") }
+  { revalidate: cacheSeconds("dashboard"), tags: ["dashboard-stats"] }
 );
 
 export const listVouchers = unstable_cache(
@@ -263,7 +263,7 @@ export const listVouchers = unstable_cache(
     });
   },
   ["vouchers-list"],
-  { revalidate: cacheSeconds("list") }
+  { revalidate: cacheSeconds("list"), tags: ["vouchers"] }
 );
 
 export const getVoucherDetail = unstable_cache(
@@ -287,7 +287,7 @@ export const getVoucherDetail = unstable_cache(
     });
   },
   ["voucher-detail"],
-  { revalidate: cacheSeconds("detail") }
+  { revalidate: cacheSeconds("detail"), tags: ["vouchers"] }
 );
 
 export const listInventoryCheckSessions = unstable_cache(
@@ -305,7 +305,7 @@ export const listInventoryCheckSessions = unstable_cache(
     });
   },
   ["inventory-check-sessions"],
-  { revalidate: cacheSeconds("list") }
+  { revalidate: cacheSeconds("list"), tags: ["inventory-checks"] }
 );
 
 export const getInventoryCheckSessionDetail = unstable_cache(
@@ -327,7 +327,7 @@ export const getInventoryCheckSessionDetail = unstable_cache(
     });
   },
   ["inventory-check-session-detail"],
-  { revalidate: cacheSeconds("detail") }
+  { revalidate: cacheSeconds("detail"), tags: ["inventory-checks"] }
 );
 
 export const listQcEvaluations = unstable_cache(
@@ -345,7 +345,7 @@ export const listQcEvaluations = unstable_cache(
     });
   },
   ["qc-evaluations-list"],
-  { revalidate: cacheSeconds("list") }
+  { revalidate: cacheSeconds("list"), tags: ["qc"] }
 );
 
 export const listDefectReportsPendingQc = unstable_cache(
@@ -369,7 +369,7 @@ export const listDefectReportsPendingQc = unstable_cache(
     });
   },
   ["defect-reports-pending-qc"],
-  { revalidate: cacheSeconds("list") }
+  { revalidate: cacheSeconds("list"), tags: ["defect-reports"] }
 );
 
 export const getDefectReportDetail = unstable_cache(
@@ -386,7 +386,7 @@ export const getDefectReportDetail = unstable_cache(
     });
   },
   ["defect-report-detail"],
-  { revalidate: cacheSeconds("detail") }
+  { revalidate: cacheSeconds("detail"), tags: ["defect-reports"] }
 );
 
 export const getQcEvaluationByDefectReportId = unstable_cache(
@@ -403,7 +403,7 @@ export const getQcEvaluationByDefectReportId = unstable_cache(
     });
   },
   ["qc-evaluation-by-defect-report"],
-  { revalidate: cacheSeconds("detail") }
+  { revalidate: cacheSeconds("detail"), tags: ["qc"] }
 );
 
 export const getQcEvaluationDetail = unstable_cache(
@@ -428,6 +428,6 @@ export const getQcEvaluationDetail = unstable_cache(
     });
   },
   ["qc-evaluation-detail"],
-  { revalidate: cacheSeconds("detail") }
+  { revalidate: cacheSeconds("detail"), tags: ["qc"] }
 );
 

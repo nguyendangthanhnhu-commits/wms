@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { revalidateTags, withAuth } from "@/lib/api-handler";
 import { CreateVoucherSchema, type CreateVoucherInput } from "@/lib/schemas/vouchers";
 
 function parseVoucherSeq(voucherCode: string) {
@@ -59,25 +58,15 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
-  try {
-    const current = await getCurrentUser();
-    if (!current?.appUser) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = withAuth(async (request, { user }) => {
+  const body = (await request.json()) as unknown;
+  const input = CreateVoucherSchema.parse(body);
 
-    const body = (await request.json()) as unknown;
-    const parsed = CreateVoucherSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-    }
-
-    const input = parsed.data;
-
-    // retry on rare unique collisions under concurrency
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const created = await prisma.$transaction(async (tx) => {
+  // retry on rare unique collisions under concurrency
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const created = await prisma.$transaction(
+        async (tx) => {
           const voucherCode = await nextVoucherCode(tx as any, input.voucherType);
 
           const shiftDate = input.shiftDate ? new Date(input.shiftDate) : undefined;
@@ -96,7 +85,7 @@ export async function POST(request: Request) {
               driverName: input.driverName,
               receiverName: input.receiverName,
               notes: input.notes,
-              createdById: current.appUser.id,
+              createdById: user.appUser.id,
               items: {
                 create: input.items.map((it) => ({
                   productId: it.productId,
@@ -122,33 +111,24 @@ export async function POST(request: Request) {
                 description: input.notes?.trim() || "Báo lỗi",
                 lotNumber: first.lotNumber,
                 status: "pending_qc",
-                reportedById: current.appUser.id,
+                reportedById: user.appUser.id,
               },
               select: { id: true },
             });
           }
 
           return voucher;
-        });
+        },
+        { timeout: 10000, maxWait: 5000 }
+      );
 
-        revalidatePath("/vouchers");
-        return NextResponse.json({ id: created.id, voucherCode: created.voucherCode });
-      } catch (err: any) {
-        // Prisma unique violation
-        if (err?.code === "P2002" && attempt < 2) continue;
-        throw err;
-      }
+      revalidateTags("vouchers", "dashboard-stats");
+      return NextResponse.json({ id: created.id, voucherCode: created.voucherCode });
+    } catch (err: any) {
+      if (err?.code === "P2002" && attempt < 2) continue;
+      throw err;
     }
-
-    return NextResponse.json({ error: "Failed to create voucher" }, { status: 500 });
-  } catch (error: unknown) {
-    const code = typeof error === "object" && error !== null && "code" in error ? String((error as any).code) : "";
-
-    if (code === "P1001" || code === "P1017") {
-      return NextResponse.json({ error: "Database temporarily unavailable" }, { status: 503 });
-    }
-
-    console.error("[POST /api/vouchers]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+
+  return NextResponse.json({ error: "Failed to create voucher" }, { status: 500 });
+});

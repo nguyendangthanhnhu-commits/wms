@@ -13,8 +13,10 @@ export const dynamic = "force-dynamic";
 export default async function InventoryCheckDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const current = await getCurrentUser();
-  const session = await getInventoryCheckSessionDetail(id);
+  const [current, session] = await Promise.all([
+    getCurrentUser(),
+    getInventoryCheckSessionDetail(id),
+  ]);
 
   if (!session) notFound();
 

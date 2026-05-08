@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { revalidateTags, withAuth } from "@/lib/api-handler";
 import { PatchInventoryCheckSchema } from "@/lib/schemas/inventory-checks";
 
 export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -38,17 +38,11 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
   }
 }
 
-export async function PATCH(request: Request, ctx: { params: Promise<{ id: string }> }) {
-  try {
-    const current = await getCurrentUser();
-    if (!current?.appUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const { id } = await ctx.params;
-    const body = (await request.json()) as unknown;
-    const parsed = PatchInventoryCheckSchema.safeParse(body);
-    if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-
-    const { action, items, photos } = parsed.data;
+export const PATCH = withAuth<{ id: string }>(async (request, { params, user }) => {
+  const current = user;
+  const { id } = await params;
+  const body = (await request.json()) as unknown;
+  const { action, items, photos } = PatchInventoryCheckSchema.parse(body);
 
     const result = await prisma.$transaction(async (tx) => {
       const session = await tx.inventoryCheckSession.findUnique({
@@ -138,21 +132,14 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
       }
 
       return { success: true as const, status: action === "complete" ? "completed" : "in_progress" };
-    });
+    }, { timeout: 10000, maxWait: 5000 });
 
-    if ("error" in result) {
-      if (result.error === "Not found") return NextResponse.json({ error: "Not found" }, { status: 404 });
-      if (result.error === "Forbidden") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      return NextResponse.json({ error: result.error }, { status: 400 });
-    }
-
-    return NextResponse.json(result);
-  } catch (error: unknown) {
-    const code = typeof error === "object" && error !== null && "code" in error ? String((error as any).code) : "";
-    if (code === "P1001" || code === "P1017") {
-      return NextResponse.json({ error: "Database temporarily unavailable" }, { status: 503 });
-    }
-    console.error("[PATCH /api/inventory-checks/[id]]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  if ("error" in result) {
+    if (result.error === "Not found") return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (result.error === "Forbidden") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: result.error }, { status: 400 });
   }
-}
+
+  revalidateTags("inventory-checks");
+  return NextResponse.json(result);
+});

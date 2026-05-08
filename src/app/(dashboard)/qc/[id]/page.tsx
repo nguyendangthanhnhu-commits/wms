@@ -12,13 +12,10 @@ export const dynamic = "force-dynamic";
 export default async function QcDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const current = await getCurrentUser();
-  const defectReport = await getDefectReportDetail(id);
-  const evaluation = await getQcEvaluationByDefectReportId(id);
-
-  if (!defectReport) notFound();
-
-  const [warehouses, staff, suppliers] = await Promise.all([
+  const [current, defectReport, evaluation, warehouses, staff, suppliers] = await Promise.all([
+    getCurrentUser(),
+    getDefectReportDetail(id),
+    getQcEvaluationByDefectReportId(id),
     listWarehouses(),
     listStaff(),
     prisma.supplier.findMany({
@@ -28,6 +25,8 @@ export default async function QcDetailPage({ params }: { params: Promise<{ id: s
       take: 500,
     }),
   ]);
+
+  if (!defectReport) notFound();
 
   const txHistory = await prisma.inventoryTransaction.findMany({
     where: { productId: defectReport.productId, lotNumber: defectReport.lotNumber ?? null },

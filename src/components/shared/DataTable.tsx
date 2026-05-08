@@ -69,7 +69,10 @@ export function DataTable<TData, TValue>({
               <TableRow
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
-                className={cn(idx % 2 === 1 && "bg-muted/30")}
+                className={cn(
+                  "transition-colors hover:bg-muted/60",
+                  idx % 2 === 1 && "bg-muted/30"
+                )}
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { revalidateTags, withAuth } from "@/lib/api-handler";
 import { CreateInventoryCheckSchema } from "@/lib/schemas/inventory-checks";
 
 export async function GET() {
@@ -31,53 +31,44 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
-  try {
-    const current = await getCurrentUser();
-    if (!current?.appUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export const POST = withAuth(async (request, { user }) => {
+  const current = user;
+  const body = (await request.json()) as unknown;
+  const input = CreateInventoryCheckSchema.parse(body);
+  const shiftDate = input.shiftDate ? new Date(input.shiftDate) : new Date();
 
-    const body = (await request.json()) as unknown;
-    const parsed = CreateInventoryCheckSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-    }
-
-    const input = parsed.data;
-    const shiftDate = input.shiftDate ? new Date(input.shiftDate) : new Date();
-
-    // Role-based warehouse restriction
-    if (current.appUser.role === "warehouse_keeper" || current.appUser.role === "production_staff") {
-      const assignments = await prisma.warehouseStaffAssignment.findMany({
-        where: { userId: current.appUser.id, warehouseId: input.warehouseId },
-        select: { id: true },
-        take: 1,
-      });
-      if (!assignments.length) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
-    }
-
-    // Duplicate session check (same warehouse + shift + date + type)
-    const start = new Date(shiftDate);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(shiftDate);
-    end.setHours(23, 59, 59, 999);
-
-    const duplicate = await prisma.inventoryCheckSession.findFirst({
-      where: {
-        warehouseId: input.warehouseId,
-        checkType: input.checkType,
-        shift: input.shift ?? null,
-        shiftDate: { gte: start, lte: end },
-      },
+  if (current.appUser.role === "warehouse_keeper" || current.appUser.role === "production_staff") {
+    const assignments = await prisma.warehouseStaffAssignment.findMany({
+      where: { userId: current.appUser.id, warehouseId: input.warehouseId },
       select: { id: true },
+      take: 1,
     });
-
-    if (duplicate) {
-      return NextResponse.json({ error: "Duplicate session" }, { status: 400 });
+    if (!assignments.length) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+  }
 
-    const created = await prisma.$transaction(async (tx) => {
+  const start = new Date(shiftDate);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(shiftDate);
+  end.setHours(23, 59, 59, 999);
+
+  const duplicate = await prisma.inventoryCheckSession.findFirst({
+    where: {
+      warehouseId: input.warehouseId,
+      checkType: input.checkType,
+      shift: input.shift ?? null,
+      shiftDate: { gte: start, lte: end },
+    },
+    select: { id: true },
+  });
+
+  if (duplicate) {
+    return NextResponse.json({ error: "Duplicate session" }, { status: 400 });
+  }
+
+  const created = await prisma.$transaction(
+    async (tx) => {
       const session = await tx.inventoryCheckSession.create({
         data: {
           warehouseId: input.warehouseId,
@@ -117,15 +108,10 @@ export async function POST(request: Request) {
       }
 
       return session;
-    });
+    },
+    { timeout: 10000, maxWait: 5000 }
+  );
 
-    return NextResponse.json({ id: created.id });
-  } catch (error: unknown) {
-    const code = typeof error === "object" && error !== null && "code" in error ? String((error as any).code) : "";
-    if (code === "P1001" || code === "P1017") {
-      return NextResponse.json({ error: "Database temporarily unavailable" }, { status: 503 });
-    }
-    console.error("[POST /api/inventory-checks]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
+  revalidateTags("inventory-checks", "dashboard-stats");
+  return NextResponse.json({ id: created.id });
+});

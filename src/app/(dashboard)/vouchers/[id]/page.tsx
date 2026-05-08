@@ -13,8 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function VoucherDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const current = await getCurrentUser();
-  const voucher = await getVoucherDetail(id);
+  const [current, voucher] = await Promise.all([getCurrentUser(), getVoucherDetail(id)]);
 
   if (!voucher) notFound();
 
